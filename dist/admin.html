@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ============================================================
+       FIDERA – ADMIN FELÜLET (React-prototípus változat)
+       Itt szerkeszthető az oldal minden szövege, a szolgáltatások,
+       a referenciák, a vendégvélemények és a blogcikkek – forráskód
+       és build nélkül. Az oldal a content.js-t futásidőben tölti be,
+       ezért a módosításhoz elég ezt az egy fájlt cserélni.
+       Két publikálási mód:
+         1) "Mentés GitHubra" – a content.js fájlt közvetlenül a
+            GitHub-tárolóba menti.
+         2) "content.js letöltése" – a fájlt letöltve kézzel töltöd
+            fel a tárhelyre, az index.html mellé.
+       Ezt az oldalt NE tedd ki nyilvánosan linkelve; a GitHub-token
+       csak ebben a böngészőben, a localStorage-ban tárolódik.
+       ============================================================ -->
+
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Fidera – Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#F4F6F9; --bg-2:#FFFFFF;
+      --ink:#1A2230; --soft:#64748B;
+      --terra:#C04B2D; --terra-soft:rgba(192,75,45,.12);
+      --green:#3E7C4F; --green-soft:rgba(62,124,79,.14);
+      --amber-deep:#9A5B12;
+      --line:#E6EBF1; --radius:14px;
+      --side:#161D2B; --side-ink:#C7D0DE;
+    }
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    body{
+      font-family:'Manrope',system-ui,sans-serif;
+      background:var(--bg); color:var(--ink); line-height:1.55;
+      -webkit-font-smoothing:antialiased;
+    }
+    h1,h2,h3{ font-family:'Archivo',sans-serif; }
+    button{ font-family:inherit; cursor:pointer; }
+    a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+      outline:3px solid var(--terra); outline-offset:2px; border-radius:6px;
+    }
+
+    .shell{ display:flex; min-height:100vh; }
+
+    /* ===== OLDALSÁV ===== */
+    .side{
+      width:230px; flex:none; background:var(--side); color:var(--side-ink);
+      padding:22px 14px; display:flex; flex-direction:column; gap:4px;
+      position:sticky; top:0; height:100vh;
+    }
+    .side .logo{
+      font-family:'Archivo',sans-serif; font-weight:900; font-size:1.2rem;
+      color:#fff; letter-spacing:-.02em; padding:0 10px 18px;
+    }
+    .side .logo b{ color:#E8734F; }
+    .side .logo small{ display:block; font-size:.62rem; font-weight:800; letter-spacing:.3em; color:var(--soft); }
+    .side button.tab{
+      display:flex; align-items:center; gap:10px;
+      background:none; border:0; color:var(--side-ink);
+      font-weight:700; font-size:.9rem; text-align:left;
+      padding:10px 12px; border-radius:10px;
+    }
+    .side button.tab:hover{ background:rgba(255,255,255,.06); }
+    .side button.tab.on{ background:var(--terra); color:#FFF7E6; }
+    .side .grow{ flex:1; }
+    .side a.back{
+      color:var(--side-ink); font-weight:700; font-size:.82rem;
+      text-decoration:none; padding:10px 12px;
+    }
+    .side a.back:hover{ color:#fff; }
+    @media (max-width:760px){
+      .shell{ flex-direction:column; }
+      .side{ width:100%; height:auto; position:static; flex-direction:row; flex-wrap:wrap; align-items:center; }
+      .side .logo{ padding:0 10px; width:100%; }
+      .side .grow{ display:none; }
+    }
+
+    /* ===== TARTALOM ===== */
+    .main{ flex:1; padding:28px clamp(16px,4vw,44px) 110px; max-width:980px; }
+    .panel{ display:none; }
+    .panel.on{ display:block; }
+    .panel h2{ font-size:1.35rem; font-weight:800; margin-bottom:4px; }
+    .panel .lead{ color:var(--soft); font-size:.9rem; margin-bottom:22px; }
+
+    .card{
+      background:var(--bg-2); border:1px solid var(--line); border-radius:var(--radius);
+      padding:20px; box-shadow:0 6px 18px rgba(60,50,30,.06); margin-bottom:16px;
+    }
+    label{
+      display:block; font-size:.74rem; font-weight:800; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--soft); margin:14px 0 5px;
+    }
+    label:first-child{ margin-top:0; }
+    input[type=text],input[type=date],input[type=password],textarea,select{
+      width:100%; padding:.6em .8em; font:inherit; font-weight:600; font-size:.92rem;
+      border:1px solid var(--line); border-radius:9px; background:#FBFCFE; color:var(--ink);
+    }
+    textarea{ resize:vertical; }
+    .row{ display:grid; gap:0 14px; grid-template-columns:1fr; }
+    @media (min-width:640px){ .row-2{ grid-template-columns:1fr 1fr; } .row-3{ grid-template-columns:2fr 1fr 1fr; } }
+
+    .btn{
+      display:inline-flex; align-items:center; gap:.5em; border:0;
+      font-weight:800; font-size:.88rem; padding:.65em 1.3em; border-radius:999px;
+    }
+    .btn-green{ background:var(--green); color:#fff; box-shadow:0 6px 16px rgba(62,124,79,.3); }
+    .btn-terra{ background:var(--terra); color:#FFF7E6; }
+    .btn-ghost{ background:var(--bg-2); color:var(--ink); border:1px solid var(--line); }
+    .btn-mini{
+      background:var(--bg-2); border:1px solid var(--line); color:var(--soft);
+      font-weight:800; font-size:.76rem; padding:.4em .9em; border-radius:999px;
+    }
+    .btn-mini:hover{ color:var(--terra); border-color:var(--terra); }
+    .btn-mini.danger:hover{ color:#B91C1C; border-color:#B91C1C; }
+
+    .list-item{
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+      padding:12px 0; border-bottom:1px dashed var(--line);
+    }
+    .list-item:last-child{ border-bottom:0; }
+    .list-item .t{ font-weight:800; font-size:.92rem; flex:1; min-width:180px; }
+    .list-item .m{ color:var(--soft); font-size:.78rem; font-weight:700; }
+    .pill{
+      font-size:.68rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+      padding:.3em .8em; border-radius:999px;
+    }
+    .pill.pub{ background:var(--green-soft); color:var(--green); }
+    .pill.draft{ background:rgba(154,91,18,.14); color:var(--amber-deep); }
+
+    /* mentősáv */
+    .savebar{
+      position:fixed; left:0; right:0; bottom:0; z-index:40;
+      background:rgba(22,29,43,.97); color:#C7D0DE;
+      padding:12px clamp(16px,4vw,44px);
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    }
+    .savebar .st{ font-size:.82rem; font-weight:700; flex:1; min-width:200px; }
+    .savebar .st b{ color:#fff; }
+    .savebar .st.ok b{ color:#7BC98F; }
+    .savebar .st.err b{ color:#FCA5A5; }
+
+    /* szerkesztő eszköztár */
+    .toolbar{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
+    .toolbar button{
+      background:var(--bg-2); border:1px solid var(--line); border-radius:8px;
+      font-weight:800; font-size:.78rem; padding:.35em .8em; color:var(--ink);
+    }
+    .toolbar button:hover{ border-color:var(--terra); color:var(--terra); }
+    .preview{
+      border:1px dashed var(--line); border-radius:10px; padding:16px 18px;
+      background:#FFFDF6; margin-top:10px; font-size:.92rem;
+    }
+    .preview h2{ font-size:1.05rem; margin:14px 0 6px; }
+    .preview ul,.preview ol{ margin-left:1.3em; }
+    .preview strong{ color:var(--terra); }
+    .preview img{ max-width:100%; border-radius:8px; }
+
+    .tip{
+      background:var(--green-soft); border:1px solid rgba(62,124,79,.3);
+      border-radius:var(--radius); padding:16px 18px; font-size:.86rem; margin-bottom:16px;
+    }
+    .tip b{ color:var(--green); }
+    .tip code{
+      display:block; background:#fff; border:1px solid var(--line); border-radius:8px;
+      padding:10px 12px; margin-top:8px; font-size:.78rem; white-space:pre-wrap;
+      font-family:ui-monospace,Consolas,monospace;
+    }
+    .muted{ color:var(--soft); font-size:.8rem; margin-top:8px; }
+    .check{ display:flex; align-items:center; gap:8px; margin-top:14px; font-weight:700; font-size:.9rem; }
+    .check input{ width:18px; height:18px; accent-color:var(--green); }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ===== OLDALSÁV ===== -->
+  <aside class="side">
+    <div class="logo">FID<b>ERA</b><small>ADMIN</small></div>
+    <button class="tab on" data-panel="p-alap">Alapadatok</button>
+    <button class="tab" data-panel="p-elerhetoseg">Elérhetőségek</button>
+    <button class="tab" data-panel="p-szolg">Szolgáltatások</button>
+    <button class="tab" data-panel="p-ref">Referenciák</button>
+    <button class="tab" data-panel="p-partner">Partnerek</button>
+    <button class="tab" data-panel="p-velemeny">Vélemények</button>
+    <button class="tab" data-panel="p-cikk">Cikkek</button>
+    <button class="tab" data-panel="p-publikalas">Publikálás</button>
+    <div class="grow"></div>
+    <a class="back" href="./" target="_blank" rel="noopener">↗ Oldal megtekintése</a>
+  </aside>
+
+  <!-- ===== PANELEK ===== -->
+  <main class="main">
+
+    <!-- ALAPADATOK -->
+    <section class="panel on" id="p-alap">
+      <h2>Alapadatok</h2>
+      <p class="lead">Az oldal főcíme, alcíme, szlogenje és a keresőknek szóló leírás.</p>
+      <div class="card">
+        <div class="row row-2">
+          <div><label for="f-focim">Főcím (márkanév)</label><input type="text" id="f-focim"></div>
+          <div><label for="f-alcim">Alcím</label><input type="text" id="f-alcim"></div>
+        </div>
+        <label for="f-tagline">Szlogen (a név alatt)</label>
+        <input type="text" id="f-tagline">
+        <label for="f-meta">Meta-leírás (a Google-találatban látszó szöveg, kb. 150 karakter)</label>
+        <textarea id="f-meta" rows="2"></textarea>
+        <label for="f-qa">Minőségbiztosítási sor (a lap alján)</label>
+        <input type="text" id="f-qa">
+      </div>
+    </section>
+
+    <!-- ELÉRHETŐSÉGEK -->
+    <section class="panel" id="p-elerhetoseg">
+      <h2>Elérhetőségek</h2>
+      <p class="lead">Telefonszámok, e-mail, működési terület, csapat.</p>
+      <div class="card">
+        <label for="f-tel">Telefonszámok (soronként egy)</label>
+        <textarea id="f-tel" rows="2"></textarea>
+        <label for="f-email">E-mail cím</label>
+        <input type="text" id="f-email">
+        <label for="f-terulet">Működési terület</label>
+        <input type="text" id="f-terulet">
+        <label for="f-csapat">Csapattagok (soronként egy név)</label>
+        <textarea id="f-csapat" rows="2"></textarea>
+      </div>
+    </section>
+
+    <!-- SZOLGÁLTATÁSOK -->
+    <section class="panel" id="p-szolg">
+      <h2>Szolgáltatások</h2>
+      <p class="lead">A főoldalon kártyaként jelennek meg – név és rövid leírás.</p>
+      <div class="card" id="szolg-list"></div>
+      <button class="btn btn-terra" id="szolg-add">+ Új szolgáltatás</button>
+    </section>
+
+    <!-- REFERENCIÁK -->
+    <section class="panel" id="p-ref">
+      <h2>Referenciák</h2>
+      <p class="lead">A vándorló képsor elemei. A <b>Fotó feltöltése</b> gombbal a gépedről választhatsz képet – automatikusan lekicsinyítjük, és a tartalommal együtt publikálódik, semmi mást nem kell feltölteni. Amíg nincs fotó, „Fotó hamarosan” felirat látszik.</p>
+      <div class="card" id="ref-list"></div>
+      <button class="btn btn-terra" id="ref-add">+ Új referencia</button>
+      <p class="muted">A fotók a tartalomfájlba ágyazva tárolódnak, ezért érdemes kb. 15 fotó alatt maradni, hogy az oldal gyors maradjon.</p>
+    </section>
+
+    <!-- PARTNEREK -->
+    <section class="panel" id="p-partner">
+      <h2>Ajánlott partnerek</h2>
+      <p class="lead">Szakemberek, akiket jó szívvel ajánlotok (villanyszerelő, burkoló…). A főoldalon külön szekcióban jelennek meg – ha egy sincs, a szekció el sem látszik.</p>
+      <div class="card" id="partner-list"></div>
+      <button class="btn btn-terra" id="partner-add">+ Új partner</button>
+    </section>
+
+    <!-- VÉLEMÉNYEK -->
+    <section class="panel" id="p-velemeny">
+      <h2>Vendégvélemények</h2>
+      <p class="lead">Ki választott titeket és mennyire elégedett – új vélemény pár kattintással felvihető.</p>
+      <div class="card" id="vel-list"></div>
+      <button class="btn btn-terra" id="vel-add">+ Új vélemény</button>
+    </section>
+
+    <!-- CIKKEK -->
+    <section class="panel" id="p-cikk">
+      <h2>Cikkek</h2>
+      <p class="lead">Blogbejegyzések dátummal, kulcsszavakkal és kereső-tagekkel. A vázlat állapotú cikk nem jelenik meg az oldalon.</p>
+
+      <div class="tip">
+        <b>Tipp:</b> a cikk szövegét megírathatod az AI-jal is. Másold be neki ezt a kérést, az eredményt pedig illeszd a „Cikk szövege” mezőbe:
+        <code>Írj magyar nyelvű, SEO-optimalizált blogcikket egy víz-gáz-fűtésszerelő cég weboldalára erről a témáról: [TÉMA]. Formázd HTML-ben (&lt;h2&gt; alcímek, &lt;p&gt; bekezdések, &lt;ul&gt; listák, &lt;strong&gt; kiemelések), adj hozzá 4 kulcsszót és egy 150 karakteres meta-leírást is.</code>
+      </div>
+
+      <div class="card" id="cikk-list"></div>
+      <button class="btn btn-terra" id="cikk-add">+ Új cikk</button>
+
+      <div class="card" id="cikk-editor" style="display:none; margin-top:16px;">
+        <h3 style="margin-bottom:10px;" id="ce-mode">Cikk szerkesztése</h3>
+        <label for="ce-cim">Cím</label>
+        <input type="text" id="ce-cim">
+        <div class="row row-3">
+          <div><label for="ce-slug">Link-azonosító (slug)</label><input type="text" id="ce-slug"></div>
+          <div><label for="ce-datum">Dátum</label><input type="date" id="ce-datum"></div>
+          <div><label style="visibility:hidden">–</label>
+            <div class="check" style="margin-top:6px;"><input type="checkbox" id="ce-pub"><label for="ce-pub" style="margin:0; text-transform:none; letter-spacing:0; font-size:.9rem;">Publikálva</label></div>
+          </div>
+        </div>
+        <label for="ce-kivonat">Kivonat (a főoldali kártyán jelenik meg)</label>
+        <textarea id="ce-kivonat" rows="2"></textarea>
+        <label for="ce-meta">Meta-leírás (a Google-találatban látszó szöveg, kb. 150 karakter)</label>
+        <textarea id="ce-meta" rows="2"></textarea>
+        <label for="ce-kulcs">Kulcsszavak (vesszővel elválasztva)</label>
+        <input type="text" id="ce-kulcs" placeholder="pl. radiátor légtelenítés, hideg radiátor">
+        <label for="ce-szoveg">Cikk szövege (HTML-formázás)</label>
+        <div class="toolbar">
+          <button type="button" data-tag="strong"><b>F</b> félkövér</button>
+          <button type="button" data-tag="em"><i>D</i> dőlt</button>
+          <button type="button" data-tag="h2">Alcím</button>
+          <button type="button" data-tag="p">Bekezdés</button>
+          <button type="button" data-tag="ul">Lista</button>
+        </div>
+        <textarea id="ce-szoveg" rows="12" spellcheck="false"></textarea>
+        <label>Előnézet</label>
+        <div class="preview" id="ce-preview"></div>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-green" id="ce-save">Cikk mentése a piszkozatba</button>
+          <button class="btn btn-ghost" id="ce-cancel">Mégse</button>
+        </div>
+        <p class="muted">A „mentés a piszkozatba” még csak itt, a szerkesztőben rögzíti a cikket – az élő oldalra a lenti zöld <b>Közzététel</b> gombbal kerül ki.</p>
+      </div>
+    </section>
+
+    <!-- PUBLIKÁLÁS -->
+    <section class="panel" id="p-publikalas">
+      <h2>Publikálás</h2>
+      <p class="lead">Így kerül ki a módosítás az élő oldalra – forráskódhoz és build-hez nem kell nyúlni: az oldal a content.js-t futásidőben tölti be.</p>
+
+      <div class="card">
+        <h3 style="font-size:1rem; margin-bottom:8px;">1. mód – Mentés GitHubra (ajánlott)</h3>
+        <p class="muted" style="margin:0 0 10px;">Ha az oldal GitHubról frissül, a Közzététel gomb közvetlenül a tárolóba menti a tartalmat. Ehhez egyszer kell beállítani az alábbiakat.</p>
+        <div class="row row-2">
+          <div><label for="gh-repo">Tároló (felhasználó/repo)</label><input type="text" id="gh-repo" placeholder="pl. fidera/weboldal"></div>
+          <div><label for="gh-branch">Ág (branch)</label><input type="text" id="gh-branch" placeholder="main"></div>
+        </div>
+        <label for="gh-path">A content.js helye a tárolóban</label>
+        <input type="text" id="gh-path" placeholder="public/content.js">
+        <p class="muted">Forráskód-tárolónál: <b>public/content.js</b>. Ha a kész (buildelt) oldal van a tárolóban: <b>content.js</b>.</p>
+        <label for="gh-token">GitHub-token (finomhangolt, csak „Contents: read &amp; write” joggal)</label>
+        <input type="password" id="gh-token" placeholder="github_pat_…" autocomplete="off">
+        <p class="muted">A token csak ebben a böngészőben tárolódik (localStorage), sehova máshova nem kerül. Token készítése: GitHub → Settings → Developer settings → Fine-grained tokens.</p>
+        <button class="btn btn-ghost" id="gh-save" style="margin-top:10px;">Beállítások mentése ebben a böngészőben</button>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:1rem; margin-bottom:8px;">2. mód – Fájl letöltése</h3>
+        <p class="muted" style="margin:0 0 12px;">Ha sima tárhelyen fut az oldal: töltsd le a kész <b>content.js</b> fájlt, és másold fel a tárhelyre az <b>index.html mellé</b> (a régi content.js helyére). Más fájlhoz nem kell nyúlni, az oldal azonnal az új tartalmat mutatja.</p>
+        <button class="btn btn-ghost" id="dl-content">content.js letöltése</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== MENTŐSÁV ===== -->
+<div class="savebar">
+  <span class="st" id="save-status">Betöltve. A módosítások a <b>Közzététel</b> gombbal kerülnek az élő oldalra.</span>
+  <button class="btn btn-ghost" id="dl-content2" style="border-color:#3A465C; background:transparent; color:#C7D0DE;">Letöltés</button>
+  <button class="btn btn-green" id="publish">Közzététel a GitHubra</button>
+</div>
+
+<script src="./content.js"></script>
+<script>
+(function(){
+  "use strict";
+  /* A szerkesztett állapot – a content.js-ből indul */
+  var C = JSON.parse(JSON.stringify(window.FIDERA_CONTENT || {}));
+  C.site = C.site || {}; C.kapcsolat = C.kapcsolat || {};
+  C.szolgaltatasok = C.szolgaltatasok || [];
+  C.velemenyek = C.velemenyek || [];
+  C.cikkek = C.cikkek || [];
+  C.referenciak = C.referenciak || [];
+  C.partnerek = C.partnerek || [];
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+  function status(msg, cls){
+    var el = $('save-status');
+    el.innerHTML = msg;
+    el.className = 'st' + (cls ? ' ' + cls : '');
+  }
+
+  /* ===== FÜLEK ===== */
+  var tabs = document.querySelectorAll('.side .tab');
+  tabs.forEach(function(t){
+    t.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });
+      t.classList.add('on');
+      $(t.getAttribute('data-panel')).classList.add('on');
+    });
+  });
+
+  /* ===== ALAPADATOK + ELÉRHETŐSÉGEK ===== */
+  function bind(id, get, set){
+    var el = $(id);
+    el.value = get() || '';
+    el.addEventListener('input', function(){ set(el.value); });
+  }
+  bind('f-focim',  function(){ return C.site.focim; },  function(v){ C.site.focim = v; });
+  bind('f-alcim',  function(){ return C.site.alcim; },  function(v){ C.site.alcim = v; });
+  bind('f-tagline',function(){ return C.site.tagline; },function(v){ C.site.tagline = v; });
+  bind('f-meta',   function(){ return C.site.metaLeiras; }, function(v){ C.site.metaLeiras = v; });
+  bind('f-qa',     function(){ return C.site.minosegbiztositas; }, function(v){ C.site.minosegbiztositas = v; });
+  bind('f-email',  function(){ return C.kapcsolat.email; },   function(v){ C.kapcsolat.email = v.trim(); });
+  bind('f-terulet',function(){ return C.kapcsolat.terulet; }, function(v){ C.kapcsolat.terulet = v; });
+  bind('f-tel',
+    function(){ return (C.kapcsolat.telefonok || []).join('\n'); },
+    function(v){ C.kapcsolat.telefonok = v.split('\n').map(function(s){ return s.trim(); }).filter(Boolean); });
+  bind('f-csapat',
+    function(){ return (C.kapcsolat.csapat || []).join('\n'); },
+    function(v){ C.kapcsolat.csapat = v.split('\n').map(function(s){ return s.trim(); }).filter(Boolean); });
+
+  /* ===== SZOLGÁLTATÁSOK ===== */
+  function renderSzolg(){
+    $('szolg-list').innerHTML = C.szolgaltatasok.map(function(s, i){
+      return '<div style="padding:12px 0; border-bottom:1px dashed var(--line);">' +
+        '<div class="row row-2">' +
+        '<div><label>Név</label><input type="text" data-sz="' + i + '" data-f="nev" value="' + esc(s.nev) + '"></div>' +
+        '<div style="display:flex; align-items:flex-end; justify-content:flex-end; padding-bottom:2px;">' +
+        '<button class="btn-mini danger" data-szdel="' + i + '">Törlés</button></div></div>' +
+        '<label>Leírás</label><textarea rows="2" data-sz="' + i + '" data-f="leiras">' + esc(s.leiras) + '</textarea></div>';
+    }).join('') || '<p class="muted">Még nincs szolgáltatás.</p>';
+  }
+  $('szolg-list').addEventListener('input', function(e){
+    var i = e.target.getAttribute('data-sz');
+    if(i !== null) C.szolgaltatasok[i][e.target.getAttribute('data-f')] = e.target.value;
+  });
+  $('szolg-list').addEventListener('click', function(e){
+    var i = e.target.getAttribute('data-szdel');
+    if(i !== null){ C.szolgaltatasok.splice(i, 1); renderSzolg(); }
+  });
+  $('szolg-add').addEventListener('click', function(){
+    C.szolgaltatasok.push({ nev:'Új szolgáltatás', leiras:'' });
+    renderSzolg();
+  });
+  renderSzolg();
+
+  /* ===== REFERENCIÁK + FOTÓFELTÖLTÉS =====
+     A kiválasztott képet a böngésző átméretezi (max 1200×900) és
+     JPEG-ként tömöríti, majd data URL-ként a tartalomba ágyazza –
+     így a Közzététellel együtt kerül fel, külön feltöltés nélkül. */
+  function kepKb(kep){ return Math.round(kep.length * 3 / 4 / 1024); }
+  function renderRef(){
+    $('ref-list').innerHTML = C.referenciak.map(function(r, i){
+      var isData = /^data:image\//.test(r.kep || '');
+      var thumb = r.kep
+        ? '<img src="' + (isData ? r.kep : esc(r.kep)) + '" alt="" style="width:72px; height:54px; object-fit:cover; border-radius:8px; border:1px solid var(--line); flex:none;">'
+        : '<div style="width:72px; height:54px; border-radius:8px; border:1px dashed var(--line); display:flex; align-items:center; justify-content:center; color:var(--soft); font-size:.58rem; font-weight:800; text-align:center; flex:none;">NINCS<br>FOTÓ</div>';
+      var kepInfo = isData
+        ? '<span class="m">feltöltött fotó (' + kepKb(r.kep) + ' kB)</span>'
+        : (r.kep ? '<span class="m">' + esc(r.kep) + '</span>' : '');
+      return '<div style="padding:12px 0; border-bottom:1px dashed var(--line);">' +
+        '<div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;">' +
+        thumb +
+        '<div style="flex:1; min-width:220px;"><label style="margin-top:0;">Munka megnevezése</label>' +
+        '<input type="text" data-r="' + i + '" data-f="cim" value="' + esc(r.cim) + '">' +
+        '<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">' +
+        '<button class="btn-mini" data-rupload="' + i + '">Fotó feltöltése</button>' +
+        (r.kep ? '<button class="btn-mini danger" data-rkepdel="' + i + '">Fotó törlése</button>' : '') +
+        '<button class="btn-mini danger" data-rdel="' + i + '">Referencia törlése</button>' +
+        kepInfo +
+        '<input type="file" accept="image/*" data-rfile="' + i + '" style="display:none;">' +
+        '</div></div></div></div>';
+    }).join('') || '<p class="muted">Még nincs referencia.</p>';
+  }
+  function fotoUpload(i, file){
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var MAX_W = 1200, MAX_H = 900;
+      var scale = Math.min(1, MAX_W / img.width, MAX_H / img.height);
+      var c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      var data = c.toDataURL('image/jpeg', 0.78);
+      C.referenciak[i].kep = data;
+      renderRef();
+      status('Fotó feltöltve (' + kepKb(data) + ' kB). Az élő oldalra a <b>Közzététel</b> gombbal kerül ki.', 'ok');
+    };
+    img.onerror = function(){
+      URL.revokeObjectURL(url);
+      status('<b>Ezt a fájlt nem sikerült képként beolvasni – válassz JPG/PNG fotót.</b>', 'err');
+    };
+    img.src = url;
+  }
+  $('ref-list').addEventListener('input', function(e){
+    var i = e.target.getAttribute('data-r');
+    if(i !== null) C.referenciak[i][e.target.getAttribute('data-f')] = e.target.value;
+  });
+  $('ref-list').addEventListener('change', function(e){
+    var i = e.target.getAttribute('data-rfile');
+    if(i !== null && e.target.files && e.target.files[0]){
+      fotoUpload(parseInt(i, 10), e.target.files[0]);
+    }
+  });
+  $('ref-list').addEventListener('click', function(e){
+    var t = e.target.closest('button');
+    if(!t) return;
+    var i;
+    if((i = t.getAttribute('data-rupload')) !== null){
+      $('ref-list').querySelector('input[data-rfile="' + i + '"]').click(); return;
+    }
+    if((i = t.getAttribute('data-rkepdel')) !== null){
+      C.referenciak[i].kep = ''; renderRef(); return;
+    }
+    if((i = t.getAttribute('data-rdel')) !== null){
+      C.referenciak.splice(i, 1); renderRef();
+    }
+  });
+  $('ref-add').addEventListener('click', function(){
+    C.referenciak.push({ cim:'Új referencia', kep:'' });
+    renderRef();
+  });
+  renderRef();
+
+  /* ===== PARTNEREK ===== */
+  function renderPartner(){
+    $('partner-list').innerHTML = C.partnerek.map(function(p, i){
+      return '<div style="padding:12px 0; border-bottom:1px dashed var(--line);">' +
+        '<div class="row row-2">' +
+        '<div><label>Név / cégnév</label><input type="text" data-p="' + i + '" data-f="nev" value="' + esc(p.nev) + '"></div>' +
+        '<div style="display:flex; align-items:flex-end; justify-content:flex-end; padding-bottom:2px;">' +
+        '<button class="btn-mini danger" data-pdel="' + i + '">Törlés</button></div></div>' +
+        '<label>Mivel foglalkozik (rövid leírás)</label>' +
+        '<textarea rows="2" data-p="' + i + '" data-f="leiras">' + esc(p.leiras) + '</textarea>' +
+        '<div class="row row-2">' +
+        '<div><label>Telefonszám (nem kötelező)</label><input type="text" data-p="' + i + '" data-f="telefon" value="' + esc(p.telefon || '') + '"></div>' +
+        '<div><label>Weboldal (nem kötelező)</label><input type="text" data-p="' + i + '" data-f="weboldal" value="' + esc(p.weboldal || '') + '" placeholder="pl. www.pelda.hu"></div>' +
+        '</div></div>';
+    }).join('') || '<p class="muted">Még nincs partner – kattints az „Új partner” gombra.</p>';
+  }
+  $('partner-list').addEventListener('input', function(e){
+    var i = e.target.getAttribute('data-p');
+    if(i !== null) C.partnerek[i][e.target.getAttribute('data-f')] = e.target.value;
+  });
+  $('partner-list').addEventListener('click', function(e){
+    var i = e.target.getAttribute('data-pdel');
+    if(i !== null){ C.partnerek.splice(i, 1); renderPartner(); }
+  });
+  $('partner-add').addEventListener('click', function(){
+    C.partnerek.push({ nev:'Új partner', leiras:'', telefon:'', weboldal:'' });
+    renderPartner();
+  });
+  renderPartner();
+
+  /* ===== VÉLEMÉNYEK ===== */
+  function renderVel(){
+    $('vel-list').innerHTML = C.velemenyek.map(function(v, i){
+      var opts = [5,4,3].map(function(n){
+        return '<option value="' + n + '"' + (v.csillag == n ? ' selected' : '') + '>' + '★★★★★'.slice(0,n) + '</option>';
+      }).join('');
+      return '<div style="padding:12px 0; border-bottom:1px dashed var(--line);">' +
+        '<div class="row row-3">' +
+        '<div><label>Név, település</label><input type="text" data-v="' + i + '" data-f="nev" value="' + esc(v.nev) + '"></div>' +
+        '<div><label>Értékelés</label><select data-v="' + i + '" data-f="csillag">' + opts + '</select></div>' +
+        '<div style="display:flex; align-items:flex-end; justify-content:flex-end; padding-bottom:2px;">' +
+        '<button class="btn-mini danger" data-vdel="' + i + '">Törlés</button></div></div>' +
+        '<label>Vélemény</label><textarea rows="2" data-v="' + i + '" data-f="szoveg">' + esc(v.szoveg) + '</textarea></div>';
+    }).join('') || '<p class="muted">Még nincs vélemény.</p>';
+  }
+  $('vel-list').addEventListener('input', function(e){
+    var i = e.target.getAttribute('data-v');
+    if(i === null) return;
+    var f = e.target.getAttribute('data-f');
+    C.velemenyek[i][f] = f === 'csillag' ? parseInt(e.target.value, 10) : e.target.value;
+  });
+  $('vel-list').addEventListener('click', function(e){
+    var i = e.target.getAttribute('data-vdel');
+    if(i !== null){ C.velemenyek.splice(i, 1); renderVel(); }
+  });
+  $('vel-add').addEventListener('click', function(){
+    C.velemenyek.push({ nev:'', szoveg:'', csillag:5 });
+    renderVel();
+  });
+  renderVel();
+
+  /* ===== CIKKEK ===== */
+  var editIdx = -1;
+  function renderCikk(){
+    var sorted = C.cikkek.slice().sort(function(a,b){ return String(b.datum).localeCompare(String(a.datum)); });
+    $('cikk-list').innerHTML = sorted.map(function(c){
+      var i = C.cikkek.indexOf(c);
+      return '<div class="list-item">' +
+        '<span class="t">' + esc(c.cim) + '</span>' +
+        '<span class="m">' + esc(c.datum || '') + '</span>' +
+        '<span class="pill ' + (c.publikalva ? 'pub">Publikálva' : 'draft">Vázlat') + '</span>' +
+        '<button class="btn-mini" data-cedit="' + i + '">Szerkesztés</button>' +
+        '<button class="btn-mini" data-cpub="' + i + '">' + (c.publikalva ? 'Levétel' : 'Publikálás') + '</button>' +
+        '<button class="btn-mini danger" data-cdel="' + i + '">Törlés</button></div>';
+    }).join('') || '<p class="muted">Még nincs cikk – kattints az „Új cikk” gombra.</p>';
+  }
+  function slugify(s){
+    var map = { 'á':'a','é':'e','í':'i','ó':'o','ö':'o','ő':'o','ú':'u','ü':'u','ű':'u' };
+    return String(s).toLowerCase()
+      .replace(/[áéíóöőúüű]/g, function(ch){ return map[ch]; })
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0, 60);
+  }
+  function openEditor(i){
+    editIdx = i;
+    var c = i >= 0 ? C.cikkek[i] : { cim:'', slug:'', datum:new Date().toISOString().slice(0,10), publikalva:false, kivonat:'', metaLeiras:'', kulcsszavak:[], szoveg:'' };
+    $('ce-mode').textContent = i >= 0 ? 'Cikk szerkesztése' : 'Új cikk';
+    $('ce-cim').value = c.cim; $('ce-slug').value = c.slug;
+    $('ce-datum').value = c.datum; $('ce-pub').checked = !!c.publikalva;
+    $('ce-kivonat').value = c.kivonat || ''; $('ce-meta').value = c.metaLeiras || '';
+    $('ce-kulcs').value = (c.kulcsszavak || []).join(', ');
+    $('ce-szoveg').value = c.szoveg || '';
+    $('ce-preview').innerHTML = c.szoveg || '<span class="muted">Ide kerül az előnézet…</span>';
+    $('cikk-editor').style.display = 'block';
+    $('cikk-editor').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  $('cikk-list').addEventListener('click', function(e){
+    var i;
+    if((i = e.target.getAttribute('data-cedit')) !== null){ openEditor(parseInt(i,10)); return; }
+    if((i = e.target.getAttribute('data-cpub')) !== null){
+      C.cikkek[i].publikalva = !C.cikkek[i].publikalva; renderCikk(); return;
+    }
+    if((i = e.target.getAttribute('data-cdel')) !== null){
+      if(confirm('Biztosan törlöd ezt a cikket?')){ C.cikkek.splice(i, 1); renderCikk(); }
+    }
+  });
+  $('cikk-add').addEventListener('click', function(){ openEditor(-1); });
+  $('ce-cim').addEventListener('input', function(){
+    if(editIdx === -1) $('ce-slug').value = slugify($('ce-cim').value);
+  });
+  $('ce-szoveg').addEventListener('input', function(){
+    $('ce-preview').innerHTML = $('ce-szoveg').value;
+  });
+  /* eszköztár: kijelölt szöveg köré teszi a formázást */
+  document.querySelector('.toolbar').addEventListener('click', function(e){
+    var tag = e.target.closest('button') && e.target.closest('button').getAttribute('data-tag');
+    if(!tag) return;
+    var ta = $('ce-szoveg');
+    var s = ta.selectionStart, epos = ta.selectionEnd, sel = ta.value.slice(s, epos);
+    var ins;
+    if(tag === 'ul'){ ins = '<ul>\n  <li>' + (sel || 'Első pont') + '</li>\n  <li>Második pont</li>\n</ul>'; }
+    else { ins = '<' + tag + '>' + (sel || (tag === 'h2' ? 'Alcím' : tag === 'p' ? 'Bekezdés szövege' : 'szöveg')) + '</' + tag + '>'; }
+    ta.value = ta.value.slice(0, s) + ins + ta.value.slice(epos);
+    ta.focus();
+    $('ce-preview').innerHTML = ta.value;
+  });
+  $('ce-save').addEventListener('click', function(){
+    var cim = $('ce-cim').value.trim();
+    if(!cim){ alert('A cikknek adj címet!'); return; }
+    var slug = $('ce-slug').value.trim() || slugify(cim);
+    var c = {
+      slug: slug,
+      cim: cim,
+      datum: $('ce-datum').value || new Date().toISOString().slice(0,10),
+      publikalva: $('ce-pub').checked,
+      kivonat: $('ce-kivonat').value.trim(),
+      metaLeiras: $('ce-meta').value.trim(),
+      kulcsszavak: $('ce-kulcs').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean),
+      szoveg: $('ce-szoveg').value
+    };
+    if(editIdx >= 0) C.cikkek[editIdx] = c; else C.cikkek.push(c);
+    $('cikk-editor').style.display = 'none';
+    renderCikk();
+    status('Cikk elmentve a piszkozatba. Az élő oldalra a <b>Közzététel</b> gombbal kerül ki.');
+  });
+  $('ce-cancel').addEventListener('click', function(){ $('cikk-editor').style.display = 'none'; });
+  renderCikk();
+
+  /* ===== SOROSÍTÁS: kész content.js szöveg ===== */
+  function contentFile(){
+    return '/* ============================================================\n' +
+      '   FIDERA – SZERKESZTHETŐ TARTALOM\n' +
+      '   Ezt a fájlt az admin.html felületről lehet módosítani,\n' +
+      '   forráskódhoz nem kell nyúlni.\n' +
+      '   Utolsó mentés: ' + new Date().toISOString() + '\n' +
+      '   ============================================================ */\n' +
+      'window.FIDERA_CONTENT = ' + JSON.stringify(C, null, 2) + ';\n';
+  }
+
+  /* ===== LETÖLTÉS ===== */
+  function download(){
+    var blob = new Blob([contentFile()], { type:'text/javascript;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'content.js';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    status('content.js letöltve (' + Math.round(contentFile().length / 1024) + ' kB) – másold fel a tárhelyre az index.html mellé.', 'ok');
+  }
+  $('dl-content').addEventListener('click', download);
+  $('dl-content2').addEventListener('click', download);
+
+  /* ===== GITHUB-BEÁLLÍTÁSOK ===== */
+  var GH_KEY = 'fidera-admin-github';
+  try{
+    var saved = JSON.parse(localStorage.getItem(GH_KEY) || '{}');
+    $('gh-repo').value = saved.repo || '';
+    $('gh-branch').value = saved.branch || 'main';
+    $('gh-path').value = saved.path || 'public/content.js';
+    $('gh-token').value = saved.token || '';
+  }catch(e){}
+  $('gh-save').addEventListener('click', function(){
+    localStorage.setItem(GH_KEY, JSON.stringify({
+      repo: $('gh-repo').value.trim(),
+      branch: $('gh-branch').value.trim() || 'main',
+      path: $('gh-path').value.trim() || 'public/content.js',
+      token: $('gh-token').value.trim()
+    }));
+    status('GitHub-beállítások elmentve ebben a böngészőben.', 'ok');
+  });
+
+  /* ===== KÖZZÉTÉTEL GITHUBRA =====
+     A content.js-t a GitHub Contents API-val menti a tárolóba. */
+  function b64utf8(str){
+    var bytes = new TextEncoder().encode(str);
+    var bin = '';
+    for(var i = 0; i < bytes.length; i++){ bin += String.fromCharCode(bytes[i]); }
+    return btoa(bin);
+  }
+  $('publish').addEventListener('click', function(){
+    var repo = $('gh-repo').value.trim();
+    var branch = $('gh-branch').value.trim() || 'main';
+    var path = $('gh-path').value.trim() || 'public/content.js';
+    var token = $('gh-token').value.trim();
+    if(!repo || !token){
+      status('Előbb add meg a GitHub-beállításokat a <b>Publikálás</b> fülön (vagy használd a Letöltés gombot).', 'err');
+      document.querySelector('[data-panel=p-publikalas]').click();
+      return;
+    }
+    var api = 'https://api.github.com/repos/' + repo + '/contents/' + path;
+    var headers = {
+      'Authorization': 'Bearer ' + token,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+    status('Közzététel folyamatban…');
+    fetch(api + '?ref=' + encodeURIComponent(branch), { headers: headers })
+      .then(function(r){
+        if(r.status === 404) return null;               /* még nincs content.js a tárolóban */
+        if(!r.ok) throw new Error('GitHub-hiba a fájl lekérésekor (' + r.status + ')');
+        return r.json();
+      })
+      .then(function(cur){
+        var body = {
+          message: 'Tartalom frissítése az admin felületről',
+          content: b64utf8(contentFile()),
+          branch: branch
+        };
+        if(cur && cur.sha) body.sha = cur.sha;
+        return fetch(api, { method:'PUT', headers: headers, body: JSON.stringify(body) });
+      })
+      .then(function(r){
+        if(!r.ok) throw new Error('GitHub-hiba mentéskor (' + r.status + ') – ellenőrizd a tárolónevet és a token jogait');
+        status('<b>Kész!</b> A tartalom felkerült a GitHubra.', 'ok');
+      })
+      .catch(function(err){
+        status('<b>' + esc(err.message) + '</b>', 'err');
+      });
+  });
+})();
+</script>
+</body>
+</html>
